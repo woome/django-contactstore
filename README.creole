@@ -1,0 +1,9 @@
+an openinviter based contact importer.
+
+[http://openinviter.com/|OpenInviter] is a PHP based addressbook handler.
+
+This is a Django wrapper for OpenInviter.
+
+It wraps using the php command line interpreter ///not/// a web call,
+so it's a little easier to set up than many other wrappers.
+
