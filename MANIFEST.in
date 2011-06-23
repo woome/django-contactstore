@@ -1,3 +1,4 @@
 include AUTHORS
 include LICENSE
 include README.creole
+recursive-include contactstore/openinviter/php *

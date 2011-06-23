@@ -24,15 +24,17 @@ def lsrecursive(base):
             output += [entry]
     return output
 
-FILES = [s.split("contactstore/openinviter/")[1] 
-         for s in lsrecursive(os.path.join(os.path.dirname(__file__), "contactstore/openinviter/php"))
-         ]
+def _get_files():
+    lst = [s.split("contactstore/openinviter/")[1] 
+             for s in lsrecursive(os.path.join(os.path.dirname(__file__), "contactstore/openinviter/php"))
+             ]
+    return lst
 
 # Depends: 
 # django, php
 setup(
     name = "django-contactstore",
-    version = "0.1",
+    version = "0.1.2",
     description = "an openinviter based contact importer",
     long_description = """Allows importing and invite sending with OpenInviter using PHP.""",
     license = "GPLv2",
@@ -43,7 +45,7 @@ setup(
     platforms = ["unix"],
     packages = ["contactstore", "contactstore.tests", "contactstore.openinviter"],
     package_data = {
-        "contactstore.openinviter": FILES,
+        "contactstore.openinviter": _get_files(),
         },
     classifiers =  classifiers
     )
