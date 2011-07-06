@@ -11,9 +11,57 @@ Command Line
 
 call this like:
 
- python invitecmd.py username@hotmail.com password
+  invitecmd username@hotmail.com password
 
 and it will contact hotmail with openinviter and print the contacts it pulled down.
+
+You can also invoke like this:
+
+  invitecmd
+
+and it will try to run through a list of tests. The list of tests can
+be defined in the python module:
+
+  contactstore_TESTS
+
+the invitecmd automatically adds the current working directory to the
+Python sys path so it's easier to find such modules.
+
+eg:
+
+  contactstore_TESTS.py
+    TESTS = [{ 
+         "username": "yahoomailaddress@yahoo.com",
+         "password": "somepassword"
+         },{
+         "username": "hotmailaddress@hotmail.com",
+         "password": "somepassword",
+         },{
+         "username": "gmailaddress@gmail.com",
+         "password": "somepasword"
+         },
+     ]
+
+and then:
+
+  invitecmd
+
+will result in those addresses being tested.
+
+
+If you don't want to use a module you can pass a filename to
+invitercmd by use of the INVITEDEFS environment variable:
+
+  INVITEDEFS=~/.mytestemails invitecmd
+
+will result in addresses defined in the file ~/.mytestemails being tested.
+
+The format of the file is emailaddress SPACE password:
+
+yahoomailaddress@yahoo.com somepassword
+hotmailaddress@hotmail.com somepassword
+gmailaddress@gmail.com somepasword
+
 
 
 Test Help
@@ -26,6 +74,8 @@ from subprocess import Popen
 from subprocess import PIPE
 from os.path import join as joinpath
 from os.path import dirname
+from os.path import expanduser
+from os.path import expandvars
 import re
 
 class ImporterException(Exception):
@@ -120,16 +170,33 @@ def get_contacts(email, password, test_mode=False):
             addresses = list(_get_contact_iter(provider, email, password, test_mode))
             return addresses
 
-try:
-    import contactstore_TESTS
-except Exception, e:
+def _get_tests():
+    import os
     TESTS = []
-else:
-    TESTS = contactstore_TESTS.TESTS
+    try:
+        cwd = os.getcwd()
+        if not (cwd in sys.path or "." in sys.path):
+            sys.path += [cwd]
+
+        import contactstore_TESTS
+    except Exception, e:
+        barefile = os.environ.get("INVITEDEFS")
+        if barefile:
+            filename = expandvars(expanduser(barefile))
+            with open(filename) as fd:
+                pairs = [line.strip().split(" ") for line in fd]
+                TESTS = [{"username": e[0], "password": e[1] } for e in pairs]
+    else:
+        TESTS = contactstore_TESTS.TESTS
+    return TESTS
 
 import sys
 def main():
     if sys.argv[1:]:
+        if sys.argv[1] in ["help", "--help", "-h", "-?", "?"]:
+            print __doc__
+            return
+
         if len(sys.argv[1:]) != 2:
             print >>sys.stderr, "Wrong args - use: providername email password"
         else:
@@ -139,7 +206,8 @@ def main():
                 )
         return
 
-    for a in TESTS:
+    tests = _get_tests()
+    for a in tests:
         try:
             print "%s %s\n" % (a["username"], get_contacts(a["username"], a["password"]))
         except Exception, e:

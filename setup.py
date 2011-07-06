@@ -47,5 +47,10 @@ setup(
     package_data = {
         "contactstore.openinviter": _get_files(),
         },
+    entry_points = {
+        'console_scripts': [
+            'openinviter = contactstore.openinviter.invitercmd:main',
+            ],
+        },
     classifiers =  classifiers
     )
