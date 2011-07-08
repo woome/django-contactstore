@@ -4,9 +4,9 @@
  */
 $_pluginInfo=array(
 	'name'=>'Flixster',
-	'version'=>'1.0.7',
+	'version'=>'1.0.8',
 	'description'=>"Get the contacts from a Flixster account",
-	'base_version'=>'1.8.0',
+	'base_version'=>'1.8.4',
 	'type'=>'social',
 	'check_url'=>'http://www.flixster.com/',
 	'requirement'=>'email',

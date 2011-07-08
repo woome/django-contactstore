@@ -4,9 +4,9 @@
  */
 $_pluginInfo=array(
 	'name'=>'Facebook',
-	'version'=>'1.2.9',
+	'version'=>'1.3.0',
 	'description'=>"Get the contacts from a Facebook account",
-	'base_version'=>'1.8.0',
+	'base_version'=>'1.8.4',
 	'type'=>'social',
 	'check_url'=>'http://apps.facebook.com/causes/',
 	'requirement'=>'email',
@@ -34,8 +34,8 @@ class facebook extends openinviter_base
 				'login_post'=>'javascript',
 				'get_user_id'=>'profile.php?id=',				
 				'url_friends'=>'fb_dtsg:"',								
-				'message_elements'=>'mailBoxItems',
-				'send_message'=>'"error":0',
+				'message_elements'=>'fb_dtsg',
+				'send_message'=>'"__ar":1',
 				);
 	
 	/**
@@ -57,10 +57,8 @@ class facebook extends openinviter_base
 		if (!$this->init()) return false;
 		
 		$res=$this->get("http://apps.facebook.com/causes/",true);
-		if ($this->checkResponse("initial_get",$res))
-			$this->updateDebugBuffer('initial_get',"http://apps.facebook.com/causes/",'GET');
-		else
-			{
+		if ($this->checkResponse("initial_get",$res)) $this->updateDebugBuffer('initial_get',"http://apps.facebook.com/causes/",'GET');
+		else{
 			$this->updateDebugBuffer('initial_get',"http://apps.facebook.com/causes/",'GET',false);
 			$this->debugRequest();
 			$this->stopPlugin();
@@ -77,10 +75,8 @@ class facebook extends openinviter_base
 							 'version'=>'1.0',
 							 );
 		$res=$this->post($form_action,$post_elements,true,true);	
-		if ($this->checkResponse("login_post",$res))
-			$this->updateDebugBuffer('login_post',"{$form_action}",'POST',true,$post_elements);
-		else
-			{
+		if ($this->checkResponse("login_post",$res)) $this->updateDebugBuffer('login_post',"{$form_action}",'POST',true,$post_elements);
+		else{
 			$this->updateDebugBuffer('login_post',"{$form_action}",'POST',false,$post_elements);
 			$this->debugRequest();
 			$this->stopPlugin();
@@ -88,10 +84,8 @@ class facebook extends openinviter_base
 			}
 		
 		$res=$this->get('http://facebook.com/',true);		
-		if ($this->checkResponse("get_user_id",$res))
-			$this->updateDebugBuffer('get_user_id',"http://facebook.com/",'GET');
-		else
-			{
+		if ($this->checkResponse("get_user_id",$res)) $this->updateDebugBuffer('get_user_id',"http://facebook.com/",'GET');
+		else{
 			$this->updateDebugBuffer('get_user_id',"http://facebook.com/",'GET',false);
 			$this->debugRequest();
 			$this->stopPlugin();
@@ -120,25 +114,22 @@ class facebook extends openinviter_base
 			return false;
 			}
 		else $url=$this->login_ok;
-		
 		$res=$this->get("http://www.facebook.com/profile.php?id={$this->userId}",true);
 		if (strpos($res,'window.location.replace("')!==FALSE)
 			{
 			$url_redirect=stripslashes($this->getElementString($res,'window.location.replace("','"'));
 			if (!empty($url_redirect)) $res=$this->get($url_redirect,true);	
-			}		
-		if ($this->checkResponse("url_friends",$res))
-			$this->updateDebugBuffer('url_friends',"http://www.facebook.com/profile.php?id={$this->userId}&ref=profile",'GET');
-		else
-			{
+			}
+		if ($this->checkResponse("url_friends",$res)) $this->updateDebugBuffer('url_friends',"http://www.facebook.com/profile.php?id={$this->userId}&ref=profile",'GET');
+		else{
 			$this->updateDebugBuffer('url_friends',"http://www.facebook.com/profile.php?id={$this->userId}&ref=profile",'GET',false);
 			$this->debugRequest();
 			$this->stopPlugin();
 			return false;
-			}	
+			}
 		$postFormId=$this->getElementString($res,'name="post_form_id" value="','"');
 		$fbDtsg=$this->getElementString($res,'fb_dtsg:"','"');
-		$page=0;		
+		$page=0;
 		$form_action=$this->login_ok;
 		$post_elements=array('edge_type'=>'browse',
 							 'page'=>$page,
@@ -148,9 +139,8 @@ class facebook extends openinviter_base
 							 'post_form_id'=>$postFormId,
 							 'fb_dtsg'=>$fbDtsg,
 							 'post_form_id_source'=>'AsyncReques',
-							);							
-		$res=$this->post($form_action,$post_elements,true);	
-		//!!!		
+							);
+		$res=$this->post($form_action,$post_elements,true);
 		$contacts=array();
 		while(preg_match_all("#\{\"id\"\:(.+)\,\"title\"\:\"(.+)\"#U",$res,$matches))
 			{
@@ -165,10 +155,10 @@ class facebook extends openinviter_base
 							 'post_form_id_source'=>'AsyncReques',
 							);
 			$res=$this->post($form_action,$post_elements);
-			if (!empty($matches[1])) 
-				foreach($matches[1] as $key=>$fbId) 
+			if (!empty($matches[1]))
+				foreach($matches[1] as $key=>$fbId)
 					if (!empty($matches[2][$key])) $contacts[$fbId]=$matches[2][$key];					
-			}								
+			}
 		return $contacts;
 		}
 
@@ -185,54 +175,42 @@ class facebook extends openinviter_base
 	 */
 	public function sendMessage($session_id,$message,$contacts)
 		{
-		$countMessages=0;							
 		$res=$this->get('http://www.facebook.com/?sk=messages',true);
-		if ($this->checkResponse("message_elements",$res))
-			$this->updateDebugBuffer('message_elements',"http://www.facebook.com/home.php?#!/?sk=messages",'GET');
-		else
-			{
+		if ($this->checkResponse("message_elements",$res)) $this->updateDebugBuffer('message_elements',"http://www.facebook.com/home.php?#!/?sk=messages",'GET');
+		else{
 			$this->updateDebugBuffer('message_elements',"http://www.facebook.com/home.php?#!/?sk=messages",'GET',false);
 			$this->debugRequest();
 			$this->stopPlugin();
 			return false;
-			}
-		$composerId=$this->getElementString($res,'"composer_id\" value=\"','\"');
+			}	
 		$postFormId=$this->getElementString($res,'name="post_form_id" value="','"');
-		$userId=$this->getElementString($res,"www.facebook.com\/profile.php?id=",'\"');
 		$fbDtsg=$this->getElementString($res,'fb_dtsg:"','"');
-		$form_action="http://www.facebook.com/ajax/gigaboxx/endpoint/MessageComposerEndpoint.php?__a=1";
-		$post_elements=array();
+		$form_action="http://www.facebook.com/ajax/messaging/async.php?__a=1";
+		$post_elements=array();				
+		$countMessages=0;
 		foreach($contacts as $fbId=>$name)
-			{						
+			{
 			$countMessages++;
 			if ($countMessages>$this->maxMessages) break;			
-			$post_elements=array("ids_{$composerId}[0]"=>$fbId,
-								  "ids[0]"=>$fbId,
-								  'subject'=>$message['subject'],
-								  'status'=>$message['body'],
-								  'action'=>'send_new',
-								  'home_tab_id'=>1,
-								  'profile_id'=>$userId,
-								  'target_id'=>0,							  
-								  'composer_id'=>$composerId,
-								  'hey_kid_im_a_composer'=>'true',							  
+			$post_elements=array( 'forward_msg'=>'',
+								  'body'=>$message['body'],								  
+								  'action'=>'send',
+								  'recipients[0]'=>$fbId,
+								  'force_sms'=>false,
 								  'post_form_id'=>$postFormId,
-								  'fb_dtsg'=>$fbDtsg,
-								  '_log_action'=>'send_new',							 
-								  'ajax_log'=>1,
+								  'fb_dtsg'=>$fbDtsg,								  
 								  'post_form_id_source'=>'AsyncRequest'								  
-								  );				
+								  );
 			$res=$this->post($form_action,$post_elements);
-			if ($this->checkResponse("send_message",$res))
-				$this->updateDebugBuffer('send_message',"{$form_action}",'POST',true,$post_elements);
-			else
-				{
+			if ($this->checkResponse("send_message",$res)) $this->updateDebugBuffer('send_message',"{$form_action}",'POST',true,$post_elements);
+			else{
 				$this->updateDebugBuffer('send_message',"{$form_action}",'POST',false,$post_elements);
 				$this->debugRequest();
 				$this->stopPlugin();
 				return false;
 				}
 			sleep($this->messageDelay);
+			if ($countMessages>$this->maxMessages) { $this->debugRequest();$this->resetDebugger();$this->stopPlugin();break; }
 			}						
 		}
 

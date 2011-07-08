@@ -1,9 +1,9 @@
 <?php
 $_pluginInfo=array(
 	'name'=>'Web.de',
-	'version'=>'1.0.6',
+	'version'=>'1.0.7',
 	'description'=>"Get the contacts from an web.de account",
-	'base_version'=>'1.6.7',
+	'base_version'=>'1.8.4',
 	'type'=>'email',
 	'check_url'=>'http://m.web.de',
 	'requirement'=>'user',
@@ -16,15 +16,20 @@ $_pluginInfo=array(
  * Imports user's contacts from web.de's AddressBook
  * 
  * @author OpenInviter
- * @version 1.6.7
+ * @version 1.8.4
  */
 class web_de extends openinviter_base
 	{
 	private $login_ok=false;
 	public $showContacts=true;
-	protected $timeout=30;		
+	protected $timeout=30;
+	protected $userAgent='Mozilla/4.1 (compatible; MSIE 5.0; Symbian OS; Nokia 3650;424) Opera 6.10  [en]';
 	public $debug_array=array(
-			 'initial_check'=>'[5]',
+			 'initial_get'=>'h_cell_r',
+			 'url_mail'=>'password',
+			 'post_login'=>'newmail;jsessionid',
+			 'new_email'=>'interface',
+			 'address_boock'=>'Privat'
 	    	);
 	
 	/**
@@ -44,31 +49,46 @@ class web_de extends openinviter_base
 		$this->service_user=$user;
 		$this->service_password=$pass;
 		if (!$this->init()) return false;
-		
-		$res=$this->get("http://m.web.de");
-		$postElem = $this->getHiddenElements($res);
-		$postAction = $this->getElementString($res,'action="','"');
-		$s=str_replace(";",'',$this->getElementString($res,'/;s=','/'));
-			
-		$postAction='/;e=utf-8;s='.$s.'/mail';
-		
-		$postElem['user']=$user;
-		$postElem['passw']=$pass;
-		$postElem['sv-remove-name']='Login';
-		$res = $this->post("http://m.web.de".$postAction, $postElem, true);
-		
-		if ($this->checkResponse("initial_check",$res))
-			$this->updateDebugBuffer('initial_check',"http://m.web.de".$postAction,'POST');		
-		else
-			{
-			$this->updateDebugBuffer('initial_check',"http://m.web.de".$postAction,'POST',false);
+		$res=$this->get("https://m.web.de/?uim_redirect=true");
+		if ($this->checkResponse('initial_get',$res)) $this->updateDebugBuffer('initial_get',"https://m.web.de/?uim_redirect=true",'GET');
+		else{
+			$this->updateDebugBuffer('initial_get',"https://m.web.de/?uim_redirect=true",'GET',false);
 			$this->debugRequest();
 			$this->stopPlugin();
 			return false;
 			}
-		$url_email=$this->getElementString($res,'[5] <a href="','"');
-		
-		$this->login_ok =$url_email; 
+		$urlMail='https://m.web.de'.$this->getElementString($res,'h_cell_r"><a href="','"');
+		$res=$this->get($urlMail,true);
+		if ($this->checkResponse('url_mail',$res)) $this->updateDebugBuffer('url_mail',$urlMail,'GET');
+		else{
+			$this->updateDebugBuffer('url_mail',$urlMail,'GET',false);
+			$this->debugRequest();
+			$this->stopPlugin();
+			return false;
+			}
+		$form_action=$this->getElementString($res,'<form action="','"');		
+		$post_elements=$this->getHiddenElements($res);		
+		$post_elements['username']=$user;
+		$post_elements['password']=$pass;
+		$post_elements['sv-remove-name']='Login';
+		$res=$this->post($form_action,$post_elements,true);		
+		if ($this->checkResponse("post_login",$res)) $this->updateDebugBuffer('post_login',$form_action,'POST');
+		else{
+			$this->updateDebugBuffer('post_login',$form_action,'POST',$post_elements);
+			$this->debugRequest();
+			$this->stopPlugin();
+			return false;
+			}
+		$newMail='https://mm.web.de/newmail;jsessionid='.$this->getElementString($res,'href="newmail;jsessionid=','"');
+		$res=$this->get($newMail,true);
+		if ($this->checkResponse('new_email',$res)) $this->updateDebugBuffer('new_email',$newMail,'GET');
+		else{
+			$this->updateDebugBuffer('new_email',$newMail,'GET',false);
+			$this->debugRequest();
+			$this->stopPlugin();
+			return false;
+			}		
+		$this->login_ok="https://mm.web.de/newmail?wicket:interface=:2:mail-form::IFormSubmitListener::";
 		return true;
 		}
 	
@@ -90,22 +110,30 @@ class web_de extends openinviter_base
 			}
 		else
 		$url=$this->login_ok;
-		//go to url inbox
-		$contacts = array();
-		$res=$this->get($url,true);
-		$res = $this->getElementString($res, '</div><div class="separator">','<input type="hidden"');
-		$contacts_array=$this->getElementDOM($res,'//a');
-		if(!is_array($contacts_array))
+		$contacts=array();	
+		$form_action=$url;
+		$post_elements=array("id4_hf_0"=>"",
+							 "write-mail-section:mail-from"=>0,
+                             "mail-to"=>"",
+                             "write-mail-section:fieldset:add-to.x"=>14,
+                             "write-mail-section:fieldset:add-to.y"=>16,
+                             "write-mail-section:fieldset:add-to"=>"to",
+                             "write-mail-section:mail-subject"=>"",
+                             "write-mail-section:mail-body"=>""
+                             );
+		$res=$this->post($form_action,$post_elements,true);
+		if ($this->checkResponse('address_boock',$res)) $this->updateDebugBuffer('address_boock',$form_action,'POST');
+		else{
+			$this->updateDebugBuffer('address_boock',$form_action,'POST',$post_elements);
+			$this->debugRequest();
+			$this->stopPlugin();
 			return false;
-		foreach($contacts_array as $key=>$val)
-			{
-			if ($key%2==0) $name=$val;
-            elseif($key%2!=0) 
-            	{
-                $val = preg_replace('/(.+\\.[A-Z]+)[^A-Z]*$/i',"\$1",trim($val));
-               	$contacts[trim($val)]=array('first_name'=>(!empty($name)?$name:false),'email_1'=>trim($val));
-                }
 			}
+		preg_match_all("#\<td colspan\=\"2\"\>\<b\>(.+)\<\/b\>\<\/td\>#U",$res,$names);
+		preg_match_all("#\<small\>Privat\: (.+)\<\/small\>#U",$res,$emails);		
+		if (!empty($emails))
+			foreach($emails[1] as $id=>$email)
+				if (!empty($names[1][$id])) $contacts[$email]=array('email_1'=>$email,'first_name'=>$names[1][$id]);
 		foreach ($contacts as $email=>$name) if (!$this->isEmail($email)) unset($contacts[$email]);
 		return $this->returnContacts($contacts);
 		}
@@ -122,11 +150,7 @@ class web_de extends openinviter_base
 	public function logout()
 		{
 		if (!$this->checkSession()) return false;
-		if (file_exists($this->getLogoutPath()))
-			{
-			 $url_logout=file_get_contents($this->getLogoutPath());		
-			if (!empty($url_logout)) $res=$this->get($url_logout,true);
-			}
+		$res=$this->get("https://mm.web.de/logout",true);		
 		$this->debugRequest();
 		$this->resetDebugger();
 		$this->stopPlugin();

@@ -1,9 +1,9 @@
 <?php
 $_pluginInfo=array(
 	'name'=>'Twitter',
-	'version'=>'1.1.1',
+	'version'=>'1.1.2',
 	'description'=>"Get the contacts from a Twitter account",
-	'base_version'=>'1.8.0',
+	'base_version'=>'1.8.4',
 	'type'=>'social',
 	'check_url'=>'http://twitter.com',
 	'requirement'=>'user',
@@ -108,8 +108,7 @@ class twitter extends OpenInviter_Base
 			return false;
 			}	
 		$contacts=array();$countUsers=0;		
-		do
-			{			
+		do{			
 			$nextPage=false;
 			$doc=new DOMDocument();libxml_use_internal_errors(true);if (!empty($res)) $doc->loadHTML($res);libxml_use_internal_errors(false);
 			$xpath=new DOMXPath($doc);
@@ -141,7 +140,9 @@ class twitter extends OpenInviter_Base
 	 */
 	public function sendMessage($session_id,$message,$contacts)
 		{
-		$countMessages=0;$res=$this->get("http://mobile.twitter.com");$auth=$this->getElementString($res,'name="authenticity_token" type="hidden" value="','"');
+		$countMessages=0;
+		$res=$this->get("http://mobile.twitter.com");
+		$auth=$this->getElementString($res,'name="authenticity_token" type="hidden" value="','"');
 		
 		$form_action="http://mobile.twitter.com";
 		$post_elements=array("authenticity_token"=>$auth,'tweet[text]'=>$message['body'],'tweet[in_reply_to_status_id]'=>false,'tweet[lat]'=>false,'tweet[long]'=>false,'tweet[place_id]'=>false,'tweet[display_coordinates]'=>false);		
@@ -149,20 +150,18 @@ class twitter extends OpenInviter_Base
 		
 		foreach($contacts as $screen_name)
 			{
-			$countMessages++;$form_action='http://mobile.twitter.com/inbox';						
+			$countMessages++;$form_action='http://mobile.twitter.com/inbox'; 						
 			$post_elements=array('authenticity_token'=>$auth,'message[text]'=>$message['body'],'message[recipient_screen_name]'=>$screen_name,'return_to'=>false,);
-			$res=$this->post($form_action,$post_elements,true);	
-			if ($this->checkResponse('send_message',$res))
-				$this->updateDebugBuffer('send_message',"{$form_action}",'POST',true,$post_elements);
-			else 
-				{
+			$res=$this->post($form_action,$post_elements,true);	 
+			if ($this->checkResponse('send_message',$res)) $this->updateDebugBuffer('send_message',"{$form_action}",'POST',true,$post_elements);
+			else{
 				$this->updateDebugBuffer('send_message',"{$form_action}",'POST',false,$post_elements);
 				$this->debugRequest();
 				$this->stopPlugin();	
 				return false;
 				}											
 			sleep($this->messageDelay);
-			if ($countMessages>$this->maxMessages) {$this->debugRequest();$this->resetDebugger();$this->stopPlugin();break;}
+			if ($countMessages>$this->maxMessages) { $this->debugRequest();$this->resetDebugger();$this->stopPlugin();break; }
 			}
 		}
 

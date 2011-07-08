@@ -4,9 +4,9 @@
  */
 $_pluginInfo=array(
 	'name'=>'Friendster',
-	'version'=>'1.1.0',
+	'version'=>'1.1.1',
 	'description'=>"Get the contacts from a Friendster account",
-	'base_version'=>'1.8.0',
+	'base_version'=>'1.8.4',
 	'type'=>'social',
 	'check_url'=>'http://www.friendster.com',
 	'requirement'=>'email',
@@ -19,7 +19,7 @@ $_pluginInfo=array(
  * using Friendster's internal messaging system
  * 
  * @author OpenInviter
- * @version 1.0.8
+ * @version 1.1.1
  */
 class friendster extends openinviter_base
 	{
