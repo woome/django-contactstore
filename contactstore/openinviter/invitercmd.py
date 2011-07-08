@@ -70,6 +70,8 @@ if you call get_contacts with test_mode=True then you get the extra
 addresses (those in TEST_LINES) that help assert things.
 """
 
+from __future__ import with_statement
+
 from subprocess import Popen
 from subprocess import PIPE
 from os.path import join as joinpath
